@@ -1,6 +1,5 @@
 #!/bin/bash
-gateway="167.13.0.1"		#ip address gateway
-
+gateway=`ping -c 1 $(route|grep default | awk -F ' ' '{print $2}') |grep PING |awk -F ' ' '{print $3}'|awk -F '(' '{print $2}' |awk -F ')' '{print $1}'`
 while true
 do
 echo "start... find hosts"
